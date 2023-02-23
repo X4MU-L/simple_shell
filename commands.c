@@ -1,165 +1,144 @@
 #include "shell.h"
 
-
 /**
- * get_cmd - gets the first argument passed to the cmd line
- * @cmd: an array of arguments passed with spaces
- * Return: a dynamic pointer to thecopy of the first argument
+ * strcat_cd - function that concatenates the message for cd error
+ *
+ * @datash: data relevant (directory)
+ * @msg: message to print
+ * @error: output message
+ * @ver_str: counter lines
+ * Return: error message
  */
-char *get_cmd(const char *cmd)
+char *strcat_cd(data_shell *datash, char *msg, char *error, char *ver_str)
 {
-	size_t i = 0, len = 0;
-	char *token = NULL;
+	char *illegal_flag;
 
-	if (cmd == NULL)
-		return (NULL);
-/*get the lenght of the first argument*/
-	len = count_words(cmd);
-	token = malloc(sizeof(char) * len + 1);
-	if (token == NULL)
-		return (NULL);
-
-	for (; i < len; i++)
-		token[i] = cmd[i];
-	token[i] = '\0';
-	return (token);
-}
-
-
-/**
- * locate_cmd - get the executable PATH of the first command passed in
- * @filename: the first command line argument passed
- * Return: a dynamic pointer to the PATH of the executable or NULL if not found
- */
-char *locate_cmd(const char *filename)
-{
-	char *cmd_path = NULL;
-	char *sys_path = NULL;
-	char *joined_path = NULL;
-
-	if (file_exits(filename))
-		return (_strdup(filename));
-
-	sys_path = _getenv("PATH");
-	strtok(sys_path, "=");
-	cmd_path = strtok(NULL, ":");
-	while (cmd_path)
+	_strcpy(error, datash->av[0]);
+	_strcat(error, ": ");
+	_strcat(error, ver_str);
+	_strcat(error, ": ");
+	_strcat(error, datash->args[0]);
+	_strcat(error, msg);
+	if (datash->args[1][0] == '-')
 	{
-		joined_path = join_paths('/', cmd_path, filename);
-		if (file_exits(joined_path))
-			break;
-		if (joined_path)
-			free(joined_path);
-		joined_path = NULL;
-		cmd_path = strtok(NULL, ":");
+		illegal_flag = malloc(3);
+		illegal_flag[0] = '-';
+		illegal_flag[1] = datash->args[1][1];
+		illegal_flag[2] = '\0';
+		_strcat(error, illegal_flag);
+		free(illegal_flag);
 	}
-	if (sys_path)
-		free(sys_path);
-	return (joined_path);
-
-}
-
-/**
- * is_exit - chcks if the first command is "exit"
- * @cmd: command to check
- * Return: 1 if cmd is "exit" else 0
- */
-int is_exit(char *cmd)
-{
-	size_t i = 0, j = 0;
-	char *exit = "exit";
-
-	while (cmd[i] == ' ')
-		i++;
-	while (exit[j] && cmd[i] && cmd[i] == exit[j])
+	else
 	{
-		j++;
-		i++;
+		_strcat(error, datash->args[1]);
 	}
-	if (!exit[j] && (!cmd[i] || cmd[i] == ' '))
-		return (1);
-	return (0);
+
+	_strcat(error, "\n");
+	_strcat(error, "\0");
+	return (error);
 }
 
 /**
- * join_paths - joins the a PATH with the first command
- * @sep: a seperator to form the PATH e.g '/'
- * @path: the first path to the executable e.g /bin
- * @filename: name of the command
- * Return: a dynamic pointer to the joined path
+ * error_get_cd - error message for cd command in get_cd
+ * @datash: data relevant (directory)
+ * Return: Error message
  */
-char *join_paths(char sep, const char *path, const char *filename)
+char *error_get_cd(data_shell *datash)
 {
-	size_t len = 0, i = 0, j = 0;
-	char *full_path = NULL;
+	int length, len_id;
+	char *error, *ver_str, *msg;
 
-	len += _strlen(path);
-	len += _strlen(filename);
-/*for seperator*/
-	len += 1;
-
-	full_path = malloc(sizeof(char) * (len + 1));
-	if (full_path == NULL)
-		return (NULL);
-
-	for (i = 0; path[i]; i++)
-		full_path[i] = path[i];
-
-	full_path[i++] = sep;
-	for (j = 0; filename[j]; i++, j++)
-		full_path[i] = filename[j];
-
-	full_path[i] = '\0';
-	return (full_path);
-}
-
-/**
- * create_array - createa pointer to array of arrays of char of size words
- * @cmd_path: path of command to execute
- * @args: remaining args of the command excluding first command
- * @words: size of array of arrays to create
- * Return: pointer to a pointer of chars
- */
-
-char **create_array(int words, const char *cmd_path, const char *args)
-{
-	size_t len = 0, tmp_len = 0;
-	int i = 0;
-	char **array = NULL;
-	char *str = NULL;
-
-	array = malloc(sizeof(char *) * words);
-	if (array == NULL)
-		return (NULL);
-	i = _strlen(cmd_path);
-	str = malloc(sizeof(char) * i + 1);
-	if (str == NULL)
+	ver_str = aux_itoa(datash->counter);
+	if (datash->args[1][0] == '-')
 	{
-		free(array);
+		msg = ": Illegal option ";
+		len_id = 2;
+	}
+	else
+	{
+		msg = ": can't cd to ";
+		len_id = _strlen(datash->args[1]);
+	}
+
+	length = _strlen(datash->av[0]) + _strlen(datash->args[0]);
+	length += _strlen(ver_str) + _strlen(msg) + len_id + 5;
+	error = malloc(sizeof(char) * (length + 1));
+
+	if (error == 0)
+	{
+		free(ver_str);
 		return (NULL);
 	}
-	i = 0;
-	array[i++] = _strcopy(str, cmd_path);
-	while (i < words && args[len])
-	{/*move from the spaces*/
-		while (args[len] && args[len] == ' ')
-			len++;
-		if (args[len] != ' ')
-		{
-			tmp_len = count_words(args + len);
-			len += tmp_len;
-		}
-		str = malloc(sizeof(char) * tmp_len + 1);
-		if (str == NULL)
-		{
-			for (; i >= 0; i--)
-				free(array[i]);
-			free(array);
-			return (NULL);
-		}
-		array[i] = copy_WO_space(str, (char *) args + (len - tmp_len));
-		i++;
+
+	error = strcat_cd(datash, msg, error, ver_str);
+
+	free(ver_str);
+
+	return (error);
+}
+
+/**
+ * error_not_found - generic error message for command not found
+ * @datash: data relevant (counter, arguments)
+ * Return: Error message
+ */
+char *error_not_found(data_shell *datash)
+{
+	int length;
+	char *error;
+	char *ver_str;
+
+	ver_str = aux_itoa(datash->counter);
+	length = _strlen(datash->av[0]) + _strlen(ver_str);
+	length += _strlen(datash->args[0]) + 16;
+	error = malloc(sizeof(char) * (length + 1));
+	if (error == 0)
+	{
+		free(error);
+		free(ver_str);
+		return (NULL);
 	}
-	array[i] = NULL;
-	return (array);
+	_strcpy(error, datash->av[0]);
+	_strcat(error, ": ");
+	_strcat(error, ver_str);
+	_strcat(error, ": ");
+	_strcat(error, datash->args[0]);
+	_strcat(error, ": not found\n");
+	_strcat(error, "\0");
+	free(ver_str);
+	return (error);
+}
+
+/**
+ * error_exit_shell - generic error message for exit in get_exit
+ * @datash: data relevant (counter, arguments)
+ *
+ * Return: Error message
+ */
+char *error_exit_shell(data_shell *datash)
+{
+	int length;
+	char *error;
+	char *ver_str;
+
+	ver_str = aux_itoa(datash->counter);
+	length = _strlen(datash->av[0]) + _strlen(ver_str);
+	length += _strlen(datash->args[0]) + _strlen(datash->args[1]) + 23;
+	error = malloc(sizeof(char) * (length + 1));
+	if (error == 0)
+	{
+		free(ver_str);
+		return (NULL);
+	}
+	_strcpy(error, datash->av[0]);
+	_strcat(error, ": ");
+	_strcat(error, ver_str);
+	_strcat(error, ": ");
+	_strcat(error, datash->args[0]);
+	_strcat(error, ": Illegal number: ");
+	_strcat(error, datash->args[1]);
+	_strcat(error, "\n\0");
+	free(ver_str);
+
+	return (error);
 }

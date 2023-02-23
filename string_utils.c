@@ -1,4 +1,4 @@
-#include "main.h"
+#include "shell.h"
 
 
 /*_strlen, _strdup, _strcopy, copy_WO_space, count_words*/
